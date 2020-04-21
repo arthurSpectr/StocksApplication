@@ -7,98 +7,82 @@ import com.stocks.model.StockUpdate;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.util.List;
+import java.sql.Connection;
+import java.sql.SQLException;
 
 public class FReader {
 
-    public boolean readFiles(List<String> files) {
+    public void parseFile(String file) {
 
-        try {
+        try (Connection conn = StockRepo.getConnection()) {
 
-            for (String file : files) {
-
-                List<String> strings = Files.readAllLines(new File(file).toPath());
-
-                for (String string : strings) {
-                    switch (string.toCharArray()[0]) {
-
-                        case 'u': {
-                            updateSave(string);
-                            break;
-                        }
-                        case 'q': {
-
-                            break;
-                        }
-                        case 'o': {
-                            updateDelete(string);
-                            break;
-                        }
-
+            for (String row : Files.readAllLines(new File(file).toPath())) {
+                switch (row.toCharArray()[0]) {
+                    case 'u': {
+                        update(row);
+                        break;
+                    }
+                    case 'q': {
+                        query(row);
+                        break;
+                    }
+                    case 'o': {
+                        order(row);
+                        break;
                     }
                 }
-
             }
 
-        } catch (IOException e) {
+        } catch (IOException | SQLException e) {
             e.printStackTrace();
         }
 
-        return false;
     }
 
-    public boolean readDirectories(List<String> directories) {
-
-        return false;
-    }
-
-    public boolean getStocks(String row) {
-
-        String[] split = row.split(",");
-
-        if(split.length == 2) {
-
-            if(split[1].equals("best_bid")) {
-
-            }
-
-            if(split[1].equals("best_ask")) {
-
-            }
-
-        }
-
-        if(split.length == 3) {
-
-        }
-
-        return true;
-    }
-
-    public boolean updateSave(String row) {
+    public void update(String row) {
         StockRepo repo = StockRepo.getInstance();
 
         StockUpdate update = new StockUpdate(row);
 
         repo.save(update);
-
-        return true;
     }
 
-    public boolean updateDelete(String row) {
+    public boolean order(String row) {
         StockRepo repo = StockRepo.getInstance();
 
         StockSell sell = new StockSell(row);
 
-        if(sell.getType().equals("buy")) {
+        if(sell.getGrade() == 1) {
             repo.removeMinPrice(sell);
         }
 
-        if(sell.getType().equals("sell")) {
+        if(sell.getGrade() == 0) {
             repo.removeMaxPrice(sell);
         }
 
         return true;
+    }
+
+    public void query(String row) {
+        StockRepo repo = StockRepo.getInstance();
+
+        String[] split = row.split(",");
+
+        if(split[1].equals("best_bid")) {
+            StockUpdate bestBidStocks = repo.getBestBidStocks();
+            System.out.println("best stock for buy " + bestBidStocks.getPrice() + ", " + bestBidStocks.getQuantity());
+        }
+
+        if(split[1].equals("best_ask")) {
+            StockUpdate bestAskStocks = repo.getBestAskStocks();
+            System.out.println("best stock for sell " + bestAskStocks.getPrice() + ", " + bestAskStocks.getQuantity());
+        }
+
+        if(split[1].equals("size")) {
+            StockUpdate stockByPrice = repo.getStockByPrice(Integer.parseInt(split[2]));
+            System.out.println("size of stock with price " + stockByPrice.getPrice() +" has size " + stockByPrice.getQuantity());
+        }
+
     }
 
 }

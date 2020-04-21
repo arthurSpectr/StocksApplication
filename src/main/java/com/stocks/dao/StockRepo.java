@@ -3,78 +3,46 @@ package com.stocks.dao;
 import com.stocks.model.StockSell;
 import com.stocks.model.StockUpdate;
 
-import java.io.File;
 import java.sql.*;
 
 public final class StockRepo {
 
-    private static final StockRepo repo = new StockRepo();
+    private static final StockRepo INSTANCE = new StockRepo();
+    private static final String URL = "jdbc:sqlite:./database.db";
+    private static Connection connection;
 
     private StockRepo() {
     }
 
     public static StockRepo getInstance() {
-        return repo;
+        return INSTANCE;
     }
 
-    public Connection connect() {
-        Connection conn = null;
-        try {
-            // db parameters
-            String url = "jdbc:sqlite:C:/sqlite/db/chinook.db";
-            // create a connection to the database
-            conn = DriverManager.getConnection(url);
+    public static Connection getConnection() {
 
-            System.out.println("Connection to SQLite has been established.");
-
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        } finally {
+        if(connection == null) {
             try {
-                if (conn != null) {
-                    conn.close();
-                }
-            } catch (SQLException ex) {
-                System.out.println(ex.getMessage());
+                connection = DriverManager.getConnection(URL);
+            } catch (SQLException e) {
+                System.out.println(e.getMessage());
             }
         }
 
-        return conn;
-    }
-
-    public void createNewDatabase() {
-
-        String url = "jdbc:sqlite:D:/sqlite/db/database";
-
-        if(new File("D:/sqlite/db/database").exists()) return;
-
-        try (Connection conn = DriverManager.getConnection(url)) {
-            if (conn != null) {
-                DatabaseMetaData meta = conn.getMetaData();
-                System.out.println("The driver name is " + meta.getDriverName());
-                System.out.println("A new database has been created.");
-            }
-
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
+        return connection;
     }
 
     public void createNewTable() {
-        // SQLite connection string
-        String url = "jdbc:sqlite:C://sqlite/db/tests.db";
 
-        // SQL statement for creating a new table
         String sql = "CREATE TABLE IF NOT EXISTS stock (\n"
                 + "	id integer PRIMARY KEY,\n"
                 + "	price INT NOT NULL,\n"
-                + "	quantity INT real\n"
-                + "	grade INT real\n"
+                + "	quantity INT real,\n"
+                + "	grade INT real,\n"
+                + " unique(price)\n"
                 + ");";
 
-        try (Connection conn = DriverManager.getConnection(url);
-             Statement stmt = conn.createStatement()) {
-            // create a new table
+        try (Statement stmt = getConnection().createStatement()) {
+
             stmt.execute(sql);
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -82,46 +50,29 @@ public final class StockRepo {
     }
 
     public void save(StockUpdate update) {
-        String sql = "INSERT INTO stock(name,capacity) VALUES(?,?,?,?)";
+        String insertQuery = "INSERT INTO stock (price, quantity, grade) VALUES (?, ?, ?) ON CONFLICT(price) DO UPDATE SET quantity = ?;";
 
-        try (Connection conn = this.connect();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-//            pstmt.setString(1, update.getTransaction_type());
-            pstmt.setInt(1, update.getPrice());
-            pstmt.setInt(2, update.getQuantity());
-            pstmt.setInt(2, update.getQuantity());
-//            pstmt.setString(4, update.getGrade());
-            pstmt.executeUpdate();
+        try (PreparedStatement insertStmt = getConnection().prepareStatement(insertQuery)) {
+
+            insertStmt.setInt(1, update.getPrice());
+            insertStmt.setInt(2, update.getQuantity());
+            insertStmt.setInt(3, update.getGrade());
+            insertStmt.setInt(4, update.getQuantity());
+
+            insertStmt.execute();
+
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
     }
 
     public void removeMinPrice(StockSell sell) {
-        String selectQuery = "SELECT id, transaction_type, price, quantity, grade WHERE price=MIN(price) from stock";
-        String removeQuery = "DELETE FROM from stock where id = ?";
-        String updateQuery = "UPDATE stock SET quantity = ? , "
-                + "WHERE id = ?";
+        String updateQuery = "UPDATE stock SET quantity = quantity-? WHERE price=(select min(price) as price from stock where grade=0)";
 
-        try (Connection conn = this.connect();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(selectQuery)) {
+        try (PreparedStatement pstmt = getConnection().prepareStatement(updateQuery)) {
 
-            int quantity = rs.getInt("quantity");
-
-            if(quantity >= sell.getQuantity()) {
-                PreparedStatement pstmt = conn.prepareStatement(removeQuery);
-
-                pstmt.setInt(1, rs.getInt("id"));
-                pstmt.executeUpdate();
-            } else {
-                PreparedStatement pstmt = conn.prepareStatement(updateQuery);
-
-                pstmt.setInt(1, quantity);
-                pstmt.setInt(2, rs.getInt("id"));
-                pstmt.executeUpdate();
-            }
-
+            pstmt.setInt(1, sell.getQuantity());
+            pstmt.executeUpdate();
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -129,29 +80,13 @@ public final class StockRepo {
     }
 
     public void removeMaxPrice(StockSell sell) {
-        String selectQuery = "SELECT id WHERE price=Max(price) from stock";
-        String removeQuery = "DELETE FROM from stock where id = ?";
-        String updateQuery = "UPDATE stock SET quantity = ? , "
-                + "WHERE id = ?";
+        String updateQuery = "UPDATE stock SET quantity = quantity-? WHERE price=(select max(price) as price from stock where grade=1)";
 
-        try (Connection conn = this.connect();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(selectQuery)) {
+        try (PreparedStatement pstmt = getConnection().prepareStatement(updateQuery)) {
 
-            int quantity = rs.getInt("quantity");
+            pstmt.setInt(1, sell.getQuantity());
 
-            if(quantity >= sell.getQuantity()) {
-                PreparedStatement pstmt = conn.prepareStatement(removeQuery);
-
-                pstmt.setInt(1, rs.getInt("id"));
-                pstmt.executeUpdate();
-            } else {
-                PreparedStatement pstmt = conn.prepareStatement(updateQuery);
-
-                pstmt.setInt(1, quantity);
-                pstmt.setInt(2, rs.getInt("id"));
-                pstmt.executeUpdate();
-            }
+            pstmt.executeUpdate();
 
 
         } catch (SQLException e) {
@@ -159,47 +94,56 @@ public final class StockRepo {
         }
     }
 
-    public void selectBestStock(String row) {
-        String sql = "SELECT transaction_type, price, quantity, grade FROM stock, WHERE ";
+    public StockUpdate getBestAskStocks() {
+        String sql = "SELECT min(price) as price, quantity FROM stock WHERE grade=0";
+        StockUpdate update = new StockUpdate();
 
-        try (Connection conn = this.connect();
-             Statement stmt  = conn.createStatement();
-             ResultSet rs    = stmt.executeQuery(sql)){
+        try (Statement stmt = getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
 
-            // loop through the result set
-            while (rs.next()) {
-                System.out.println(rs.getInt("id") +  "\t" +
-                        rs.getString("name") + "\t" +
-                        rs.getDouble("capacity"));
-            }
-        } catch (SQLException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
-    public ResultSet selectStockByPrice(String row){
-        int quantity = Integer.parseInt(row.split(",")[2]);
-        ResultSet rs = null;
-
-        String sql = "SELECT transaction_type, price, quantity, grade FROM stock, WHERE quantity = ?";
-
-        try (Connection conn = this.connect();
-             PreparedStatement statement = conn.prepareStatement(sql)){
-            statement.setInt(1, quantity);
-
-            rs = statement.executeQuery();
-
-            // loop through the result set
-            while (rs.next()) {
-                System.out.println(rs.getInt("id") +  "\t" +
-                        rs.getString("name") + "\t" +
-                        rs.getDouble("capacity"));
-            }
-
+            update.setPrice(rs.getInt("price"));
+            update.setQuantity(rs.getInt("quantity"));
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
-        return rs;
+        return update;
     }
+
+    public StockUpdate getBestBidStocks() {
+        String sql = "SELECT max(price) as price, quantity FROM stock WHERE grade=1";
+        StockUpdate update = new StockUpdate();
+
+        try (Statement stmt = getConnection().createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            update.setPrice(rs.getInt("price"));
+            update.setQuantity(rs.getInt("quantity"));
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return update;
+    }
+
+    public StockUpdate getStockByPrice(int price) {
+
+        String sql = "SELECT grade, price, quantity FROM stock WHERE price=?";
+        StockUpdate update = new StockUpdate();
+
+        try (PreparedStatement stmt  = getConnection().prepareStatement(sql)) {
+
+            stmt.setInt(1, price);
+            ResultSet rs = stmt.executeQuery();
+
+            update.setPrice((rs.getInt("price")));
+            update.setQuantity(rs.getInt("quantity"));
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return update;
+    }
+
 }

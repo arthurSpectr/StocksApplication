@@ -2,24 +2,15 @@ package com.stocks.model;
 
 public class StockSell {
 
-    private String transaction_type;
     private int quantity;
-    private String grade;
+    private int grade;
 
     public StockSell(String row) {
         String[] split = row.split(",");
 
-        transaction_type = split[0];
-        quantity = Integer.parseInt(split[1]);
-        grade = split[2];
-    }
+        grade = split[1].equals("buy") ? 1 : 0;
+        quantity = Integer.parseInt(split[2]);
 
-    public String getGrade() {
-        return grade;
-    }
-
-    public void setGrade(String grade) {
-        this.grade = grade;
     }
 
     public int getQuantity() {
@@ -30,11 +21,11 @@ public class StockSell {
         this.quantity = quantity;
     }
 
-    public String getType() {
-        return transaction_type;
+    public int getGrade() {
+        return grade;
     }
 
-    public void setType(String type) {
-        this.transaction_type = type;
+    public void setGrade(int grade) {
+        this.grade = grade;
     }
 }

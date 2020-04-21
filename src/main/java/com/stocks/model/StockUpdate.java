@@ -5,7 +5,10 @@ public class StockUpdate {
     private String transaction_type;
     private int price;
     private int quantity;
-    private String grade;
+    private int grade;
+
+    public StockUpdate() {
+    }
 
     public StockUpdate (String row) {
 
@@ -13,15 +16,15 @@ public class StockUpdate {
         transaction_type = split[0];
         price = Integer.parseInt(split[1]);
         quantity = Integer.parseInt(split[2]);
-        grade = split[3];
+        grade = split[3].equals("bid") ? 1 : 0;
 
     }
 
-    public String getGrade() {
+    public int getGrade() {
         return grade;
     }
 
-    public void setGrade(String grade) {
+    public void setGrade(int grade) {
         this.grade = grade;
     }
 
