@@ -1,7 +1,7 @@
 package com.stocks;
 
 import com.stocks.dao.StockRepo;
-import com.stocks.service.FReader;
+import com.stocks.service.StockService;
 
 public class Main {
 
@@ -9,7 +9,7 @@ public class Main {
         StockRepo repo = StockRepo.getInstance();
         repo.createNewTable();
 
-        FReader reader = new FReader();
+        StockService reader = new StockService();
 
         if (args.length > 0) {
 
