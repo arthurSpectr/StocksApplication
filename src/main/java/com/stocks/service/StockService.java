@@ -3,6 +3,8 @@ package com.stocks.service;
 import com.stocks.dao.StockRepo;
 import com.stocks.model.StockSell;
 import com.stocks.model.StockUpdate;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -13,6 +15,8 @@ import java.sql.Connection;
 import java.sql.SQLException;
 
 public class StockService {
+
+    private static final Logger LOG = LogManager.getLogger(StockService.class.getName());
 
     BufferedWriter bufferedWriter;
 
@@ -75,20 +79,24 @@ public class StockService {
 
         if(split[1].equals("best_bid")) {
             StockUpdate bestBidStocks = repo.getBestBidStocks();
-            System.out.println("best stock for buy " + bestBidStocks.getPrice() + ", " + bestBidStocks.getQuantity());
-            getFileWriter().write(bestBidStocks.getPrice() + ", " + bestBidStocks.getQuantity() + "\n");
+//            System.out.println("best stock for buy " + bestBidStocks.getPrice() + ", " + bestBidStocks.getQuantity());
+//            getFileWriter().write(bestBidStocks.getPrice() + ", " + bestBidStocks.getQuantity() + "\n");
+            LOG.info("{}, {}\n", bestBidStocks::getPrice, bestBidStocks::getQuantity);
+//            LOG.info("asdsadsadsa");
         }
 
         if(split[1].equals("best_ask")) {
             StockUpdate bestAskStocks = repo.getBestAskStocks();
-            System.out.println("best stock for sell " + bestAskStocks.getPrice() + ", " + bestAskStocks.getQuantity());
-            getFileWriter().write(bestAskStocks.getPrice() + ", " + bestAskStocks.getQuantity() + "\n");
+//            System.out.println("best stock for sell " + bestAskStocks.getPrice() + ", " + bestAskStocks.getQuantity());
+//            getFileWriter().write(bestAskStocks.getPrice() + ", " + bestAskStocks.getQuantity() + "\n");
+            LOG.info("{}, {}\n", bestAskStocks.getPrice(), bestAskStocks.getQuantity());
         }
 
         if(split[1].equals("size")) {
             StockUpdate stockByPrice = repo.getStockByPrice(Integer.parseInt(split[2]));
-            System.out.println("size of stock with price " + stockByPrice.getPrice() +" has size " + stockByPrice.getQuantity());
-            getFileWriter().write(stockByPrice.getQuantity() + "\n");
+//            System.out.println("size of stock with price " + stockByPrice.getPrice() +" has size " + stockByPrice.getQuantity());
+//            getFileWriter().write(stockByPrice.getQuantity() + "\n");
+            LOG.info("{} \n", stockByPrice.getQuantity());
         }
 
     }
